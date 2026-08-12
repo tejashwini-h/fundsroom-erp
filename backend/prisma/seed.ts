@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import { PrismaClient } from "../src/generated/prisma/client.js";
+
 import {
   Role,
   CustomerStatus,
@@ -8,6 +9,7 @@ import {
 } from "../src/generated/prisma/enums.js";
 
 import { PrismaPg } from "@prisma/adapter-pg";
+
 import bcrypt from "bcrypt";
 
 const adapter = new PrismaPg({
@@ -17,7 +19,6 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({
   adapter,
 });
-
 async function main() {
   const password = await bcrypt.hash("Password@123", 10);
 
@@ -25,7 +26,9 @@ async function main() {
     where: {
       email: "admin@fundsroom.com",
     },
-    update: {},
+    update: {
+      password,
+    },
     create: {
       name: "Admin User",
       email: "admin@fundsroom.com",
@@ -38,7 +41,9 @@ async function main() {
     where: {
       email: "sales@fundsroom.com",
     },
-    update: {},
+    update: {
+      password,
+    },
     create: {
       name: "Sales User",
       email: "sales@fundsroom.com",
@@ -51,7 +56,9 @@ async function main() {
     where: {
       email: "warehouse@fundsroom.com",
     },
-    update: {},
+    update: {
+      password,
+    },
     create: {
       name: "Warehouse User",
       email: "warehouse@fundsroom.com",
@@ -64,7 +71,9 @@ async function main() {
     where: {
       email: "accounts@fundsroom.com",
     },
-    update: {},
+    update: {
+      password,
+    },
     create: {
       name: "Accounts User",
       email: "accounts@fundsroom.com",
@@ -134,7 +143,8 @@ async function main() {
   });
 
   console.log("Database seeded successfully.");
-  console.log("Users created:");
+
+  console.log("Users created/updated:");
   console.log(admin.email);
   console.log(sales.email);
   console.log(warehouse.email);
