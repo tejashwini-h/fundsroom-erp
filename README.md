@@ -38,9 +38,10 @@ The application provides a modern dashboard-based interface and a RESTful backen
 - Protected frontend routes
 - Protected backend API routes
 - Role-based authorization
-- Admin and Sales role support
+- Admin, Sales, Warehouse, and Accounts roles
 - Automatic token handling through Axios
 - Automatic logout on unauthorized API responses
+- Token expiration handling
 
 ### 📊 Dashboard
 
@@ -73,7 +74,7 @@ The dashboard provides an overview of important ERP information:
 - Create products
 - Edit products
 - Delete products
-- SKU validation
+- SKU uniqueness validation
 - Category management
 - Warehouse management
 - Unit price management
@@ -147,18 +148,24 @@ The system prevents stock from becoming negative.
 - Challan status management
 - Pagination
 
+Supported challan statuses:
+
+- DRAFT
+- CONFIRMED
+- CANCELLED
+
 ### 🔗 Challan & Inventory Integration
 
-When a challan results in a stock dispatch:
+When a challan is confirmed, inventory is automatically updated.
 
 ```text
 Create Challan
       ↓
 Select Customer
       ↓
-Select Product
+Select Products
       ↓
-Enter Quantity
+Enter Quantities
       ↓
 Validate Stock
       ↓
@@ -193,10 +200,20 @@ This keeps inventory synchronized with sales activity.
 - Prisma ORM
 - JWT
 - bcrypt
+- CORS
 
 ### Database
 
 - PostgreSQL
+- Prisma ORM
+- Prisma migrations
+- Prisma transactions
+
+### Deployment
+
+- Vercel — Frontend
+- Render — Backend
+- Neon — PostgreSQL database
 
 ### Development Tools
 
@@ -218,20 +235,22 @@ This keeps inventory synchronized with sales activity.
                          ┌─────────────────┐
                          │ React Frontend  │
                          │   TypeScript    │
+                         │     Vite        │
                          └────────┬────────┘
                                   │
-                              Axios API
+                              Axios / REST
                                   │
                                   ▼
                          ┌─────────────────┐
                          │ Express Backend │
                          │    REST API     │
+                         │   TypeScript    │
                          └────────┬────────┘
                                   │
                                   ▼
                          ┌─────────────────┐
-                         │ Authentication  │
-                         │ & Authorization │
+                         │ JWT Auth + RBAC │
+                         │   Middleware    │
                          └────────┬────────┘
                                   │
                                   ▼
@@ -247,7 +266,36 @@ This keeps inventory synchronized with sales activity.
                                   ▼
                          ┌─────────────────┐
                          │   PostgreSQL    │
+                         │      Neon       │
                          └─────────────────┘
+```
+
+### Production Deployment Architecture
+
+```text
+                         User
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │    Vercel    │
+                    │ React / Vite │
+                    └──────┬───────┘
+                           │
+                        HTTPS
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │    Render    │
+                    │ Express API  │
+                    └──────┬───────┘
+                           │
+                         Prisma
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │     Neon     │
+                    │  PostgreSQL  │
+                    └──────────────┘
 ```
 
 ---
@@ -260,14 +308,11 @@ fundsroom-erp/
 ├── backend/
 │   ├── prisma/
 │   │   ├── migrations/
-│   │   │   ├── 20260811091901_init/
-│   │   │   │   └── migration.sql
-│   │   │   ├── migration_lock.toml
-│   │   │   ├── schema.prisma
-│   │   │   └── seed.ts
+│   │   │   └── 20260811091901_init/
+│   │   │       └── migration.sql
+│   │   └── seed.ts
 │   │
 │   ├── prisma.config.ts
-│   │
 │   ├── src/
 │   │   ├── config/
 │   │   │   └── prisma.ts
@@ -300,17 +345,12 @@ fundsroom-erp/
 │   │   │   └── MainLayout.css
 │   │   ├── pages/
 │   │   │   ├── Dashboard.tsx
-│   │   │   ├── Dashboard.css
 │   │   │   ├── Customers.tsx
-│   │   │   ├── Customers.css
 │   │   │   ├── Products.tsx
-│   │   │   ├── Products.css
 │   │   │   ├── Inventory.tsx
-│   │   │   ├── Inventory.css
 │   │   │   ├── Challans.tsx
-│   │   │   ├── Challans.css
 │   │   │   ├── Login.tsx
-│   │   │   └── Login.css
+│   │   │   └── corresponding CSS files
 │   │   ├── services/
 │   │   │   └── api.ts
 │   │   ├── types/
@@ -320,8 +360,12 @@ fundsroom-erp/
 │   │   ├── index.css
 │   │   └── main.tsx
 │   │
+│   ├── index.html
 │   ├── package.json
 │   └── vite.config.ts
+│
+├── postman/
+│   └── Fundsroom-ERP-API.postman_collection.json
 │
 ├── screenshots/
 │   ├── dashboard.png
@@ -471,6 +515,62 @@ Example response:
 
 ---
 
+## 📮 Postman API Documentation
+
+A complete Postman collection is included in the repository:
+
+```text
+postman/Fundsroom-ERP-API.postman_collection.json
+```
+
+The collection contains:
+
+- Health check
+- User authentication
+- Customer management
+- Product management
+- Inventory stock-in
+- Inventory stock-out
+- Stock movement history
+- Sales challan creation
+- Sales challan listing
+- Challan details
+- Challan status updates
+
+### Using the Collection
+
+1. Open Postman.
+2. Select **Import**.
+3. Import:
+
+```text
+postman/Fundsroom-ERP-API.postman_collection.json
+```
+
+4. Run the **Login** request first.
+5. The JWT token returned by the login request is automatically stored in the collection.
+6. Protected API requests use the stored Bearer token automatically.
+
+### Production API Base URL
+
+```text
+https://fundsroom-erp-mrk0.onrender.com/api
+```
+
+### Collection Variables
+
+| Variable | Purpose |
+|---|---|
+| `baseUrl` | Production API base URL |
+| `token` | JWT authentication token |
+| `loginEmail` | Login email used by the collection |
+| `loginPassword` | Login password used by the collection |
+| `customerId` | Customer ID used for testing |
+| `productId` | Product ID used for testing |
+| `challanId` | Challan ID used for testing |
+
+---
+
 ## 🔐 Security
 
 The application implements:
@@ -486,8 +586,9 @@ The application implements:
 - Duplicate SKU validation
 - Insufficient stock validation
 - Invalid resource validation
+- Automatic unauthorized-session handling
 
-Sensitive environment variables such as database credentials and JWT secrets are stored in `.env` and are not committed to the repository.
+Sensitive environment variables such as database credentials and JWT secrets are stored in `.env` files and are not committed to the repository.
 
 ---
 
@@ -516,9 +617,14 @@ Sales users can perform sales-related operations such as:
 
 Warehouse users can perform inventory operations such as:
 
+- Product management
 - Stock In
 - Stock Out
 - Stock movement viewing
+
+### ACCOUNTS
+
+Accounts users are supported as an application role and can be authenticated through the role-based authorization system.
 
 ---
 
@@ -526,7 +632,14 @@ Warehouse users can perform inventory operations such as:
 
 The application uses **PostgreSQL** with **Prisma ORM**.
 
-The database contains relationships between users, customers, products, stock movements, and challans.
+The database contains relationships between:
+
+- Users
+- Customers
+- Products
+- Stock movements
+- Challans
+- Challan items
 
 Conceptually:
 
@@ -549,6 +662,8 @@ Customers     Challans
 ```
 
 Prisma migrations are included in the repository to reproduce the database structure.
+
+Database operations involving inventory updates use Prisma transactions to maintain data consistency.
 
 ---
 
@@ -602,7 +717,7 @@ JWT_SECRET="your-secret-key"
 PORT=5000
 ```
 
-> Never commit `.env` to GitHub.
+> Never commit `.env` files to GitHub.
 
 ### 5. Run Database Migrations
 
@@ -619,7 +734,7 @@ npx prisma generate
 ### 7. Seed the Database
 
 ```bash
-npx prisma db seed
+npm run seed
 ```
 
 ### 8. Start the Backend
@@ -702,18 +817,52 @@ cd backend
 npm run build
 ```
 
+Both production builds have been verified successfully.
+
+---
+
+## ☁️ Deployment
+
+### Frontend
+
+The React/Vite frontend is deployed on **Vercel**.
+
+### Backend
+
+The Node.js/Express backend is deployed on **Render**.
+
+### Database
+
+The PostgreSQL database is hosted on **Neon**.
+
+### Production API
+
+```text
+https://fundsroom-erp-mrk0.onrender.com/api
+```
+
+### Production Frontend
+
+```text
+https://fundsroom-erp-flax.vercel.app
+```
+
+Environment variables are configured separately on the deployment platforms and are not stored in the Git repository.
+
 ---
 
 ## 🧪 Testing the Application
 
-The following workflows have been verified during development:
+The following workflows have been verified on the deployed application.
 
 ### Authentication
 
 - Login
 - Protected routes
-- Unauthorized access redirect
+- Unauthorized access handling
 - Token-based API requests
+- Logout
+- Invalid credential handling
 
 ### Customers
 
@@ -722,6 +871,7 @@ The following workflows have been verified during development:
 - Search customers
 - Edit customer
 - Delete customer
+- Customer details
 
 ### Products
 
@@ -730,6 +880,7 @@ The following workflows have been verified during development:
 - Search products
 - Edit product
 - Delete product
+- SKU uniqueness validation
 - Low-stock detection
 
 ### Inventory
@@ -743,9 +894,10 @@ The following workflows have been verified during development:
 ### Challans
 
 - Create challan
-- View challan
+- View challans
 - Search challans
 - Filter challans
+- View challan details
 - Update challan status
 - Inventory integration
 - Stock movement integration
@@ -799,7 +951,18 @@ View complete challan details including customer information, products, quantiti
 
 ---
 
+## 🔑 Demo Credentials
 
+The following seeded accounts are available for testing:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@fundsroom.com` | `Password@123` |
+| Sales | `sales@fundsroom.com` | `Password@123` |
+| Warehouse | `warehouse@fundsroom.com` | `Password@123` |
+| Accounts | `accounts@fundsroom.com` | `Password@123` |
+
+> These credentials are demo/test credentials for the case-study application.
 
 ---
 
@@ -826,6 +989,10 @@ This project demonstrates practical implementation of:
 - Axios interceptors
 - Error handling
 - Production builds
+- Vercel deployment
+- Render deployment
+- Neon PostgreSQL deployment
+- Postman API documentation
 
 ---
 
@@ -855,22 +1022,41 @@ This provides a consistent flow of information across the application and keeps 
 
 ---
 
-## 🚀 Future Improvements
+## ⚠️ Known Limitations
+
+The following features were not included in the current implementation:
 
 - PDF challan generation
-- Invoice generation
+- Invoice PDF generation
 - CSV/Excel report export
 - Advanced inventory analytics
-- Advanced dashboard charts
-- Automated unit and integration testing
+- Automated unit and integration test suite
 - CI/CD pipeline
 - Docker containerization
-- Production deployment
-- Cloud PostgreSQL deployment
 - Email notifications
-- Inventory alerts
+- Advanced audit logging
+- S3-based file/image storage
+
+These features can be added in future iterations depending on business requirements.
+
+---
+
+## 🚀 Future Improvements
+
+Potential future improvements include:
+
+- PDF challan and invoice generation
+- CSV/Excel reporting
+- Advanced dashboard analytics
+- Automated unit and integration testing
+- GitHub Actions CI/CD
+- Docker containerization
+- Email notifications
 - Audit logs
-- Mobile-responsive improvements
+- Advanced inventory alerts
+- Improved mobile responsiveness
+- More granular permissions
+- Expanded reporting and analytics
 
 ---
 
